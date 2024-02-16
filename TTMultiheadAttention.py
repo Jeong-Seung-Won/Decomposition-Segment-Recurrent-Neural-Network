@@ -4,7 +4,7 @@ class TTMultiheadAttention(nn.Module):
         self.num_heads = num_heads
         self.head_dim = input_dim // num_heads
         tt_linear = TTLinear(input_dim, rank)
-        self.ar, self.cr, self.br = tt_linear.forward()
+        self.ar, self.br, self.cr = tt_linear.forward()
         self.fc_out = nn.Linear(input_dim, input_dim)
         self.dropout = nn.Dropout(dropout_rate)
         self.input_dim = input_dim
@@ -25,10 +25,10 @@ class TTMultiheadAttention(nn.Module):
         cr = self.cr
 
         attention = torch.matmul(df.permute(3, 1, 2, 4, 0), ar)
-        attention = torch.matmul(attention.permute(0, 1, 4, 3, 2), cr.permute(0, 2, 1))
+        attention = torch.matmul(attention.permute(0, 1, 4, 3, 2), br.permute(0, 2, 1))
         attention = attention / torch.sqrt(torch.tensor(self.head_dim, dtype = torch.float32))
         attention = F.softmax(attention, dim = -1)
-        out = torch.matmul(attention, br.permute(2, 1, 0)).to(device)
+        out = torch.matmul(attention, cr.permute(2, 1, 0)).to(device)
         out = out.permute(2, 1, 4, 0, 3)
         out = out.reshape(size)
         out = out.sum(dim = 0).view(query.shape)
